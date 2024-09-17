@@ -18,13 +18,17 @@ from PersonDetailClass import PersonDetails
 from dateutil import parser
 from datetime import datetime
 from dateutil.parser import ParserError
+from dotenv import load_dotenv
 
+
+load_dotenv()
 
 ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
-
-co = cohere.Client('IEo7xZnWi8cPD7jzR2dpsw3cvdGjchG6RCKPko05')
+print("os.getenv('COHERE_API_KEY')")
+print(os.getenv('COHERE_API_KEY'))
+co = cohere.Client( os.getenv('COHERE_API_KEY'))
 
 os.environ['CURL_CA_BUNDLE'] = ''
 
@@ -60,8 +64,6 @@ def process_lines(content):
     part_counter = 1  # נתחיל את המנייה של הכותרות מ-1
     if isinstance(content, str):
         content = content.splitlines()  # מפצל לפי \n
-
-    # מוסיפים כותרת לחלק הראשון לפני כל שורה
     current_title = f"PART{part_counter}"
     current_section = {"title": current_title, "content": ""}
     part_counter += 1
@@ -184,25 +186,17 @@ def main(query,text):
     return None
 
 
-def clean_date_string(date_string):
-    print("date_string")
-    # שומר רק תווים מספריים ותווים של תאריך
-    print(date_string)
-    #cleaned_string = re.sub(r'[^0-9/-]', '', date_string)
-   # return cleaned_string
+
 def parse_date(date_string):
     try:
         print("kkkk")
-        # print(date_string)
         cleaned_string = re.sub(r'[^0-9/-]', '', date_string)
         print(cleaned_string)
-        # שימוש ב-dateutil.parser כדי לנתח את התאריך מכל פורמט שהוא
-        parsed_date = parser.parse(cleaned_string)  # dayfirst=True מוודא שניתן להבין שהיום קודם לחודש
-        # החזרת התאריך בפורמט המתאים ל-SQL: YYYY-MM-DD
+        parsed_date = parser.parse(cleaned_string)
         return parsed_date.strftime("%Y-%m-%d")
     except ValueError:
-        # במקרה שהפירוש נכשל, מחזירים את התאריך המקורי או זורקים שגיאה
-        raise ValueError(f"Cannot parse date: {date_string}")
+        return ''
+       # raise ValueError(f"Cannot parse date: {date_string}")
 
 
 #def parse_date(date_string):
@@ -234,6 +228,8 @@ def arrange(text):
     date_of_injury_answer=parse_date(date_of_injury_answer)
     doctor_answer = main("מי הרופאים המטפלים?", text)
     # יצירת אובייקט מסוג PersonDetails עם כל הפרטים שהתקבלו
+    if(date_of_injury_answer==''):
+        date_of_injury_answer=None
     person_details = PersonDetails(
         name=name_answer,
         age=age_answer,
