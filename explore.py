@@ -26,9 +26,8 @@ load_dotenv()
 ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
-print("os.getenv('COHERE_API_KEY')")
-print(os.getenv('COHERE_API_KEY'))
-co = cohere.Client( os.getenv('COHERE_API_KEY'))
+
+co = cohere.Client(os.getenv('COHERE_API_KEY'))
 
 os.environ['CURL_CA_BUNDLE'] = ''
 
@@ -44,6 +43,7 @@ MARKDOWN_SEPARATORS = [
     "\.",  # Periods
     " ",  # Spaces between words
 ]
+
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=400,
     chunk_overlap=0,
@@ -61,17 +61,15 @@ def process_lines(content):
     current_title = None
     current_section = None
     sections = []
-    part_counter = 1  # נתחיל את המנייה של הכותרות מ-1
+    part_counter = 1
     if isinstance(content, str):
-        content = content.splitlines()  # מפצל לפי \n
+        content = content.splitlines()
     current_title = f"PART{part_counter}"
     current_section = {"title": current_title, "content": ""}
     part_counter += 1
-
     for line in content:
         line = line.strip()
         line = re.sub(r'\.\s\.', '.', line)  # מחבר נקודות רצופות
-
         if not line:  # זיהוי כותרת לפי שורה ריקה
             if current_section and current_section["content"]:
                 sections.append(current_section)
@@ -82,10 +80,8 @@ def process_lines(content):
             if current_section:
                 current_section["content"] += " " + line.strip()  # מוסיף את השורה לתוכן
 
-    # בסיום, נוודא שהחלק האחרון מתווסף
     if current_section and current_section["content"]:
         sections.append(current_section)
-
     return sections
 
 def process_sections(sections):
@@ -101,7 +97,6 @@ def process_sections(sections):
     for i, part in enumerate(processed_texts, 1):
         print(f"Part {i}: {part}")
     return processed_texts
-
 
 
 
@@ -133,6 +128,7 @@ def process_sentences(sentences):
         save_embedding(word_embeddings)
     else:
         print("Error: sentences should be a list of dictionaries containing 'text' fields.")
+
 def save_embedding(word_embeddings):
     filename = "vectors.pkl"
     with open(filename, 'wb') as f:
@@ -199,34 +195,40 @@ def parse_date(date_string):
        # raise ValueError(f"Cannot parse date: {date_string}")
 
 
-#def parse_date(date_string):
- #   date_string = clean_date_string(date_string)
-  #  formats = ["%a, %d %b %Y %H:%M:%S %Z","%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y","%Y/%m/%d","%m-%d-%Y","%Y.%m.%d","%m.%d.%Y","%d.%m.%Y"]  # הוסיפי פורמטים נוספים לפי הצורך
-   # for fmt in formats:
-    #    try:
-     #       parsed_date = datetime.strptime(date_string, fmt)
-      #      # אם ההמרה הצליחה, נחזיר את התאריך בפורמט המבוקש: 02-03-2024
-       #     return parsed_date.strftime("%Y-%m-%d")
-        #except ValueError:
-         #   continue
-    #return date_string
+
+def process_without_numbers(name):
+    cleaned_name = re.sub(r'[0-9]', '', name)
+    if not re.search(r'[a-zA-Zא-ת]', cleaned_name):  # בודק אם יש אותיות בעברית או באנגלית
+        return None
+    return cleaned_name
+
+
+def clean_to_number(id_number):
+    # בדיקה אם יש רק מספרים
+    if id_number.isdigit():
+        return id_number
+    # אם יש גם תווים אחרים, נשאיר רק את המספרים
+    cleaned_id = ''.join([c for c in id_number if c.isdigit()])
+    # אם אחרי הניקוי נשארו מספרים, נחזיר אותם, אחרת נחזיר NULL
+    return cleaned_id if cleaned_id else None
+
 def arrange(text):
-    #name_answer = ''
-
     name_answer = main("מה שם הפצוע?", text)
-    #age_answer = ''
-
+    name_answer=process_without_numbers(name_answer)
     age_answer = main("בן כמה הפצוע?", text)
-    #name_father_answer = ''
+    age_answer=clean_to_number(age_answer)
     name_father_answer = main("מה שם האבא של הפצוע?", text)
-
+    name_father_answer=process_without_numbers(name_father_answer)
     id_number_answer = main("מה ת.ז. הפצוע?", text)
+    id_number_answer = clean_to_number(id_number_answer)
     hospital_answer = main("באיזה בית חולים הפצוע?", text)
+    hospital_answer=process_without_numbers(hospital_answer)
     date_of_injury_answer = main("מתי הייתה הפציעה?", text)
     print("date_of_injury_answer")
     print(date_of_injury_answer)
-    date_of_injury_answer=parse_date(date_of_injury_answer)
+    date_of_injury_answer = parse_date(date_of_injury_answer)
     doctor_answer = main("מי הרופאים המטפלים?", text)
+    doctor_answer=process_without_numbers(doctor_answer)
     # יצירת אובייקט מסוג PersonDetails עם כל הפרטים שהתקבלו
     if(date_of_injury_answer==''):
         date_of_injury_answer=None
